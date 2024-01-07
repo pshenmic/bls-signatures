@@ -386,7 +386,7 @@ PYBIND11_MODULE(blspy, m)
         }))
         .def(
             "from_bytes",
-            [](py::buffer const b) {
+            [](py::buffer const b, bool isLegacy) {
                 py::buffer_info info = b.request();
                 if (info.format != py::format_descriptor<uint8_t>::format() ||
                     info.ndim != 1)
@@ -400,7 +400,7 @@ PYBIND11_MODULE(blspy, m)
                 std::array<uint8_t, G1Element::SIZE> data;
                 std::copy(data_ptr, data_ptr + G1Element::SIZE, data.data());
                 py::gil_scoped_release release;
-                return G1Element::FromBytes(data);
+                return G1Element::FromBytes(data, isLegacy);
             })
         .def(
             "from_bytes_unchecked",
