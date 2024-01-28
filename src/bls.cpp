@@ -92,3 +92,26 @@ void BLS::CheckRelicErrors(bool should_throw)
 }
 
 }  // end namespace bls
+
+extern "C"
+{
+    bool bls_basic_verify(unsigned char *pubkey, bool isLegacy, unsigned char *signature, unsigned char* message) {
+        // pubkey
+        auto pubkey_data_ptr = static_cast<uint8_t *>(pubkey);
+        std::array<uint8_t, bls::G1Element::SIZE> pubkey_data;
+        std::copy(pubkey_data_ptr, pubkey_data_ptr + bls::G1Element::SIZE, pubkey_data.data());
+        bls::G1Element g1Element = bls::G1Element::FromBytesUnchecked(pubkey_data, isLegacy);
+
+        // message
+        std::vector<uint8_t> v(message, message + 32);
+
+        // signature
+        auto sig_data_ptr = static_cast<uint8_t *>(signature);
+        std::array<uint8_t, bls::G2Element::SIZE> sig_data;
+        std::copy(sig_data_ptr, sig_data_ptr + bls::G2Element::SIZE, sig_data.data());
+
+        bls::G2Element g2Element = bls::G2Element::FromBytes(sig_data);
+
+       return bls::BasicSchemeMPL().Verify(g1Element, v, g2Element);
+    }
+}
