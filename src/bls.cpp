@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstring>
+
 #include "bls.hpp"
 
 #if BLSALLOC_MIMALLOC
@@ -114,4 +116,64 @@ extern "C"
 
        return bls::BasicSchemeMPL().Verify(g1Element, v, g2Element);
     }
+
+    typedef struct Signature {
+        unsigned char data[bls::G2Element::SIZE];  // Assuming G2Element size is 96 bytes
+    } Signature;
+    
+    Signature bls_basic_sign(
+        const unsigned char* privkey,
+        const unsigned char* message,
+        size_t messageLen
+    ) {
+        std::array<uint8_t, bls::PrivateKey::PRIVATE_KEY_SIZE> privkey_data;
+        std::copy(
+            privkey,
+            privkey + bls::PrivateKey::PRIVATE_KEY_SIZE,
+            privkey_data.data()
+        );
+
+        std::vector<uint8_t> msgVec(message, message + messageLen);
+
+        bls::PrivateKey sk = bls::PrivateKey::FromBytes(privkey_data);
+
+        std::vector<uint8_t> signature_vec = bls::BasicSchemeMPL().Sign(sk, msgVec).Serialize();
+
+        Signature result;
+        std::memcpy(result.data, signature_vec.data(), signature_vec.size());
+
+        return result;
+    }
+
+    typedef struct KeyPair {
+        unsigned char privkey[bls::PrivateKey::PRIVATE_KEY_SIZE];
+        unsigned char pubkey[bls::G1Element::SIZE];
+    } KeyPair;
+
+    KeyPair bls_basic_keygen(const unsigned char* seed){
+        std::array<uint8_t, 32> seed_data;
+        std::copy(
+            seed,
+            seed + 32,
+            seed_data.data()
+        );
+
+        std::vector<uint8_t> seed_vec(seed_data.begin(), seed_data.end());
+
+        bls::BasicSchemeMPL mpl;
+
+        bls::PrivateKey privKey = mpl.KeyGen(seed_vec);
+        std::vector<uint8_t> privVec = privKey.Serialize();
+
+        bls::G1Element pubKey = privKey.GetG1Element();
+        std::vector<uint8_t> pubVec = pubKey.Serialize();
+
+        KeyPair result;
+        std::memcpy(result.privkey, privVec.data(), privVec.size());
+        std::memcpy(result.pubkey, pubVec.data(), pubVec.size());
+
+        return result;
+
+    }
+
 }
